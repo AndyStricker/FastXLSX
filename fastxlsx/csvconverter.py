@@ -1,14 +1,15 @@
+import sys
 import csv
 import datetime
 import fastxlsx
 
 class Converter(object):
-    def __init__(self, outfile):
-        if isinstance(str, outfile, with_progress=False):
+    def __init__(self, outfile, with_progress=False):
+        if isinstance(outfile, str):
             self.outfile = file(outfile, 'w')
         else:
             self.outfile = outfile
-        self.writer = csv.writer(of,
+        self.writer = csv.writer(self.outfile,
                                  delimiter=',',
                                  quotechar='"',
                                  quoting=csv.QUOTE_NONNUMERIC)
@@ -42,7 +43,7 @@ class Converter(object):
         else:
             record.extend(['' for x in xrange(len(record), self.columns)])
 
-        writer.writerow(record)
+        self.writer.writerow(record)
         self.rows += 1
         if self.with_progress:
             self.update_progress()

@@ -16,7 +16,7 @@ outfile = file("%s-%s.csv" % (filename, sheetname), 'w')
 doc = fastxlsx.reader.Document()
 print "Loading workbook in progress..."
 print "    - create CSV converter"
-handler = fastxlsx.csv.Converter(outfile, with_progress=True)
+handler = fastxlsx.csvconverter.Converter(outfile, with_progress=True)
 print "    - open input file %s ..." % filename
 doc.add_row_event_handler(handler)
 doc.open(sys.argv[1])
