@@ -4,6 +4,8 @@ import datetime
 import fastxlsx
 
 class Converter(object):
+    VALUE = fastxlsx.reader.Sheet.VALUE
+
     def __init__(self, outfile, with_progress=False):
         if isinstance(outfile, str):
             self.outfile = file(outfile, 'w')
@@ -21,7 +23,7 @@ class Converter(object):
     def __call__(self, row):
         record = []
         for cell in row:
-            v = cell['value']
+            v = cell[self.VALUE]
             if v is None:
                 record.append('')
             elif isinstance(v, datetime.datetime):

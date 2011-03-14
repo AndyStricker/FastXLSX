@@ -1,7 +1,8 @@
 import xml.parsers.expat
 import zipfile
-import xldate
 import datetime
+import re
+import xldate
 
 class DocumentArchive(object):
     def __init__(self, filename):
@@ -22,6 +23,9 @@ class DocumentArchive(object):
 
     def shared_strings(self):
         return self.filehandle('xl/sharedStrings.xml')
+
+    def styles(self):
+        return self.filehandle('xl/styles.xml')
 
 class SharedStrings(list):
     def __init__(self, archive):
@@ -54,6 +58,58 @@ class SharedStrings(list):
                 self.data = data
             else:
                 self.data += data
+
+class Styles(object):
+    BUILTIN_NUM_FMTS = {
+        0: int,
+        1: datetime,
+        2: datetime,
+        3: datetime,
+        4: datetime,
+    }
+
+    def __init__(self, archive):
+        parser = xml.parsers.expat.ParserCreate()
+        parser.StartElementHandler = self._start_element
+        parser.EndElementHandler = self._end_element
+        parser.CharacterDataHandler = self._char_data
+
+        self._numberFormats = []
+        self._inCellXfs = False
+        self.current_style = None
+
+        fh = archive.styles()
+        parser.ParseFile(fh)
+        fh.close()
+
+    def _start_element(self, name, attrs):
+        if name == 'cellXfs':
+            self._inCellXfs = True
+        elif self._inCellXfs and name == 'xf':
+            self.current_style = {
+                'numFmt': int(attrs.get(u'numFmtId', 0)),
+                'font': attrs.get(u'fontId'),
+                'fill': attrs.get(u'fillId'),
+                'border': attrs.get(u'borderId'),
+                'xf': attrs.get(u'xfId'),
+                'applyFont': attrs.get(u'applyFont'),
+                'applyNumFmt': attrs.get(u'applyNumberFormat'),
+            }
+
+    def _end_element(self, name):
+        if name == 'cellXfs':
+            self._inCellXfs = False
+        elif self.current_style and name == 'xf':
+            self._numberFormats.append(self.current_style)
+            self.current_style = None
+
+    def _char_data(self, data):
+        pass
+
+    def numberFormat(self, styleId):
+        style = self._numberFormats[int(styleId)]
+        return self.BUILTIN_NUM_FMTS.get(style['numFmt'], unicode)
+
 
 class Workbook(dict):
     def __init__(self, archive):
@@ -88,6 +144,15 @@ class Workbook(dict):
         return meta[u'sheetId']
 
 class Sheet(object):
+    STYLE = 's'
+    TYPE = 't'
+    TYPE_SHARED_STRING = u's'
+    REF = 'r'
+    COLUMN = 'c'
+    VALUE = 'v'
+
+    rel_re = re.compile(r'([A-Z]+)(\d+)')
+
     def __init__(self, doc, archive, sheet_id):
         self.document = doc
 
@@ -104,6 +169,7 @@ class Sheet(object):
         self.is_value = False
 
         self.shared_strings = self.document.shared_strings()
+        self.styles = self.document.styles()
 
         fh = archive.sheet(sheet_id)
         parser.ParseFile(fh)
@@ -119,15 +185,11 @@ class Sheet(object):
             self.current_row = []
         elif name == 'c':
             self.cell = {
-                '_shared': False,
-                's': attrs.get(u's', None),
-                'type': attrs.get(u't'),
-                'id': attrs.get(u'r'),
-                'idx': len(self.current_row),
+                self.STYLE: attrs.get(u's'),
+                self.TYPE: attrs.get(u't'),
+                self.REF: attrs.get(u'r'),
+                self.COLUMN: len(self.current_row),
             }
-            if attrs.has_key(u't') and attrs[u't'] == u's':
-                self.cell['_shared'] = True
-
         elif name == 'v':
             self.is_value = True
 
@@ -141,25 +203,27 @@ class Sheet(object):
             self.current_row = None
         elif name == 'c':
             c = self.cell
-            if c['_shared']:
+            if c[self.TYPE] == self.TYPE_SHARED_STRING:
                 idx = int(self.data, 10)
-                c['value'] = self.shared_strings[idx]
+                c[self.VALUE] = self.shared_strings[idx]
             else:
-                c['value'] = self.data
-            if c['s'] in ['2', '5'] and c['value'] is not None:
+                c[self.VALUE] = self.data
+            style = self.styles.numberFormat(c[self.STYLE])
+            print "cell style is:", str(style)
+            if style is datetime and c[self.VALUE] is not None:
                 try:
-                    v = float(c['value'])
+                    v = float(c[self.VALUE])
                     try:
                         d = xldate.xldate_as_tuple(v, 0)
-                        c['value'] = datetime.datetime(*d)
+                        c[self.VALUE] = datetime.datetime(*d)
                     except xldate.XLDateAmbiguous, e:
                         if v == 1.0:
-                            #print "value 1.0 for date:", c
-                            c['value'] = ''
+                            print "value 1.0 for date:", c
+                            c[self.VALUE] = ''
                         else:
                             raise e
                 except ValueError, e:
-                    #print "no float:", c
+                    print "no float:", c
                     pass
             self.current_row.append(c)
             self.data = None
@@ -179,6 +243,7 @@ class Document(object):
     def __init__(self, filename=None):
         self.__archive = None
         self.__shared_strings = None
+        self.__styles = None
         self.__workbook = None
         self.__sheets = {}
         self.__row_event_handlers = []
@@ -197,6 +262,11 @@ class Document(object):
         if self.__shared_strings is None:
             self.__shared_strings = SharedStrings(self.archive())
         return self.__shared_strings
+
+    def styles(self):
+        if self.__styles is None:
+            self.__styles = Styles(self.archive())
+        return self.__styles
 
     def workbook(self):
         if self.__workbook is None:
@@ -228,7 +298,6 @@ def debug_row(row):
     for cell in row:
         print "      [%4s, %c, %4s] %s" % (
             cell['s'],
-            cell['_shared'] and 's' or '-',
             cell['type'],
             cell['value']
         )
