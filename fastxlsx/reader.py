@@ -60,12 +60,47 @@ class SharedStrings(list):
                 self.data += data
 
 class Styles(object):
+    BUILTIN_FMT = 0
+    BUILTIN_TYPE = 1
+    # Stolen from perls Spreadsheet::XLSX
     BUILTIN_NUM_FMTS = {
-        0: int,
-        1: datetime,
-        2: datetime,
-        3: datetime,
-        4: datetime,
+        0x00: ('@', unicode),
+        0x01: ('0', int),
+        0x02: ('0.00', float),
+        0x03: ('#,##0', float),
+        0x04: ('#,##0.00', float),
+        0x05: ('($#,##0_);($#,##0)', float),
+        0x06: ('($#,##0_);[RED]($#,##0)', float),
+        0x07: ('($#,##0.00_);($#,##0.00_)', float),
+        0x08: ('($#,##0.00_);[RED]($#,##0.00_)', float),
+        0x09: ('0%', int),
+        0x0A: ('0.00%', float),
+        0x0B: ('0.00E+00', float),
+        0x0C: ('# ?/?', float),
+        0x0D: ('# ??/??', float),
+        0x0E: ('m-d-yy', datetime.date),
+        0x0F: ('d-mmm-yy', datetime.date),
+        0x10: ('d-mmm', datetime.date),
+        0x11: ('mmm-yy', datetime.date),
+        0x12: ('h:mm AM/PM', datetime.time),
+        0x13: ('h:mm:ss AM/PM', datetime.time),
+        0x14: ('h:mm', datetime.time),
+        0x15: ('h:mm:ss', datetime.time),
+        0x16: ('m-d-yy h:mm', datetime.datetime),
+#0x17-0x24 -- Differs in Natinal
+        0x25: ('(#,##0_);(#,##0)', int),
+        0x26: ('(#,##0_);[RED](#,##0)', int),
+        0x27: ('(#,##0.00);(#,##0.00)', float),
+        0x28: ('(#,##0.00);[RED](#,##0.00)', float),
+        0x29: ('_(*#,##0_);_(*(#,##0);_(*"-"_);_(@_)', float),
+        0x2A: ('_($*#,##0_);_($*(#,##0);_(*"-"_);_(@_)', float),
+        0x2B: ('_(*#,##0.00_);_(*(#,##0.00);_(*"-"??_);_(@_)', float),
+        0x2C: ('_($*#,##0.00_);_($*(#,##0.00);_(*"-"??_);_(@_)', float),
+        0x2D: ('mm:ss', datetime.timedelta),
+        0x2E: ('[h]:mm:ss', datetime.timedelta),
+        0x2F: ('mm:ss.0', datetime.timedelta),
+        0x30: ('##0.0E+0', float),
+        0x31: ('@', unicode),
     }
 
     def __init__(self, archive):
@@ -107,8 +142,14 @@ class Styles(object):
         pass
 
     def numberFormat(self, styleId):
+        return self._numberFormats[int(styleId)]
+
+    def cellType(self, styleId):
         style = self._numberFormats[int(styleId)]
-        return self.BUILTIN_NUM_FMTS.get(style['numFmt'], unicode)
+        return self.BUILTIN_NUM_FMTS.get(style['numFmt'], unicode)[self.BUILTIN_TYPE]
+
+    def cellFormat(self, styleId):
+        return self.BUILTIN_NUM_FMTS.get(style['numFmt'], unicode)[self.BUILTIN_FMT]
 
 
 class Workbook(dict):
@@ -144,7 +185,7 @@ class Workbook(dict):
         return meta[u'sheetId']
 
 class Sheet(object):
-    STYLE = 's'
+    STYLE_IDX = 's'
     TYPE = 't'
     TYPE_SHARED_STRING = u's'
     REF = 'r'
@@ -185,7 +226,7 @@ class Sheet(object):
             self.current_row = []
         elif name == 'c':
             self.cell = {
-                self.STYLE: attrs.get(u's'),
+                self.STYLE_IDX: attrs.get(u's'),
                 self.TYPE: attrs.get(u't'),
                 self.REF: attrs.get(u'r'),
                 self.COLUMN: len(self.current_row),
@@ -208,9 +249,10 @@ class Sheet(object):
                 c[self.VALUE] = self.shared_strings[idx]
             else:
                 c[self.VALUE] = self.data
-            style = self.styles.numberFormat(c[self.STYLE])
-            print "cell style is:", str(style)
-            if style is datetime and c[self.VALUE] is not None:
+            #fmt = self.styles.numberFormat(c[self.STYLE_IDX])
+            #print "cell format is:", str(fmt['numFmt']), c[self.COLUMN], c[self.VALUE]
+            cellType = self.styles.cellType(c[self.STYLE_IDX])
+            if cellType is datetime and c[self.VALUE] is not None:
                 try:
                     v = float(c[self.VALUE])
                     try:
