@@ -26,17 +26,18 @@ class Converter(object):
             v = cell[self.VALUE]
             if v is None:
                 record.append('')
+            elif isinstance(v, (unicode, str)):
+                record.append(v.encode('UTF-8'))
+            elif isinstance(v, (float, int)):
+                record.append(str(v))
             elif isinstance(v, datetime.datetime):
                 record.append(v.strftime('%d.%m.%Y %H:%M:%S'))
+            elif isinstance(v, datetime.date):
+                record.append(v.strftime('%d.%m.%Y'))
+            elif isinstance(v, datetime.time):
+                record.append(v.strftime('%H:%M:%S'))
             else:
-                try:
-                    v = int(v, 10)
-                except ValueError:
-                    try:
-                        v = float(v)
-                    except ValueError:
-                        v = v.encode('UTF-8')
-                record.append(v)
+                raise Exception("Unknown format detected: " + repr(v))
 
         if self.first_row is None:
             self.columns = len(record)
