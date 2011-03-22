@@ -169,18 +169,15 @@ class Styles(object):
     def _char_data(self, data):
         pass
 
-    def numberFormat(self, styleId):
+    def cell_style(self, styleId):
         """ Return the style with the ID styleId """
         return self._numberFormats[int(styleId)]
 
-    def cellStyle(self, styleId):
-        return self._numberFormats[int(styleId)]
-
-    def cellTypeFromStyle(self, style):
+    def cell_type_from_style(self, style):
         """ Return a python type object from style """
         return self.BUILTIN_NUM_FMTS.get(style['numFmt'], unicode)[self.BUILTIN_TYPE]
 
-    def cellFormatFromType(self, style):
+    def cell_format_from_style(self, style):
         """ Return a format string for style """
         return self.BUILTIN_NUM_FMTS.get(style['numFmt'], unicode)[self.BUILTIN_FMT]
 
@@ -291,8 +288,8 @@ class Sheet(object):
                 c[self.VALUE] = self.data
             #fmt = self.styles.numberFormat(c[self.STYLE_IDX])
             #print "cell format is:", str(fmt['numFmt']), c[self.COLUMN], c[self.VALUE]
-            c[self.STYLE] = self.styles.cellStyle(c[self.STYLE_IDX])
-            c[self.FMT] = cellType = self.styles.cellTypeFromStyle(c[self.STYLE])
+            c[self.STYLE] = self.styles.cell_style(c[self.STYLE_IDX])
+            c[self.FMT] = cellType = self.styles.cell_type_from_style(c[self.STYLE])
             v = c[self.VALUE]
             if (v is not None) and (c[self.FMT] in (datetime.datetime,
                                                     datetime.date,
@@ -400,42 +397,43 @@ class Document(object):
         for handler in self.__row_event_handlers:
             handler(row)
 
-def debug_row(row):
-    for cell in row:
-        print "      [%4s, %c, %4s] %s" % (
-            cell['s'],
-            cell['type'],
-            cell['value']
-        )
-
 class FirstNRowStorage(list):
     """ Stores the first N rows from a worksheet """
     def __init__(self, n=10):
         super(FirstNRowStorage)
         self.n = n
         self.rows = []
-        self.is_limit = False
+        self.is_limit_reached = False
 
     def __call__(self, row):
-        if self.is_limit:
+        if self.is_limit_reached:
             return
         self.rows.append(row)
-        self.is_limit = not (len(self.rows) <= self.n)
+        self.is_limit_reached = not (len(self.rows) <= self.n)
 
 def main():
     import sys
+    if len(sys.argv) < 2:
+        raise Exception("arguments XLSX file or workbook missing")
+
     doc = Document()
-    doc.open(sys.argv[1])
     storage = FirstNRowStorage(2)
     doc.add_row_event_handler(storage)
+    doc.open(sys.argv[1])
     print "Read %d shared strings" % len(doc.shared_strings())
     print "Workbook contains sheets:", doc.sheet_names()
-    #sheetname = u'Bild'
-    sheetname = u'Personendaten'
+    sheetname = sys.argv[2]
     print "Sheet ID for '%s':" % sheetname, doc.workbook().sheet_id(sheetname)
     sheet = doc.sheet(sheetname)
-    print "Read %d rows" % sheet.row_count
+    print "Read %d rows" % len(storage.rows)
     print "row 0:"
+    def debug_row(row):
+        for c in row:
+            print "    %s: %-16s: %s" % (
+                c[Sheet.REF],
+                doc.styles().cell_format_from_style(c[Sheet.STYLE]),
+                c[Sheet.VALUE]
+            )
     debug_row(storage.rows[0])
     print "row 1:"
     debug_row(storage.rows[1])
