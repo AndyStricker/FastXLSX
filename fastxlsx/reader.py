@@ -230,6 +230,7 @@ class Sheet(object):
     VALUE = 'v'
 
     rel_re = re.compile(r'([A-Z]+)(\d+)')
+    MAX_COLUMNS = 1024
 
     def __init__(self, doc, archive, sheet_id):
         self.document = doc
@@ -255,6 +256,23 @@ class Sheet(object):
 
         del self.shared_strings
 
+    def parse_rel(self, cell):
+        """ Convert numeric reference (A1, AD23) into numeric tuple (column, row) """
+        column, row = self.rel_re.match(cell[self.REF]).groups()
+
+        v = 0
+        for i, ch in enumerate(column):
+            s = len(column) - i - 1
+            v += (ord(ch) - ord('A') + 1) * (26**s)
+
+        cell[self.REF] = (v, row)
+        # savety check to detect omitted cells what we currently don't support
+        if v != cell[self.COLUMN]:
+            raise Exception(
+                "Detected omitted cell. This feature is not yet implemented: %s <> %s" % (
+                    v, cell[self.COLUMN]
+                ))
+
     def _start_element(self, name, attrs):
         #print "start element:", name, attrs
         if name == 'sheetData':
@@ -266,7 +284,7 @@ class Sheet(object):
                 self.STYLE_IDX: attrs.get(u's'),
                 self.TYPE: attrs.get(u't'),
                 self.REF: attrs.get(u'r'),
-                self.COLUMN: len(self.current_row),
+                self.COLUMN: len(self.current_row) + 1,
             }
         elif name == 'v':
             self.is_value = True
@@ -281,6 +299,7 @@ class Sheet(object):
             self.current_row = None
         elif name == 'c':
             c = self.cell
+            self.parse_rel(c)
             if c[self.TYPE] == self.TYPE_SHARED_STRING:
                 idx = int(self.data, 10)
                 c[self.VALUE] = self.shared_strings[idx]
