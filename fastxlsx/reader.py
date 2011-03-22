@@ -1,3 +1,25 @@
+#
+# Copyright (c) 2011 Andreas Stricker <andy@knitter.ch>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
 import xml.parsers.expat
 import zipfile
 import datetime
@@ -5,6 +27,10 @@ import re
 import xldate
 
 class DocumentArchive(object):
+    """
+    Represent the document ZIP archive. Provide accessor for file handles
+    to fetch the archive files.
+    """
     def __init__(self, filename):
         self.zip_filename = filename
         self.zip_filehandle = zipfile.ZipFile(filename)
@@ -28,6 +54,7 @@ class DocumentArchive(object):
         return self.filehandle('xl/styles.xml')
 
 class SharedStrings(list):
+    """ Parse the shared string list and store it as list for lookup. """
     def __init__(self, archive):
         parser = xml.parsers.expat.ParserCreate()
         parser.StartElementHandler = self._start_element
@@ -60,6 +87,7 @@ class SharedStrings(list):
                 self.data += data
 
 class Styles(object):
+    """ Parse style file and provide methods to work with styles and formats. """
     BUILTIN_FMT = 0
     BUILTIN_TYPE = 1
     # Stolen from perls Spreadsheet::XLSX
@@ -142,19 +170,23 @@ class Styles(object):
         pass
 
     def numberFormat(self, styleId):
+        """ Return the style with the ID styleId """
         return self._numberFormats[int(styleId)]
 
     def cellStyle(self, styleId):
         return self._numberFormats[int(styleId)]
 
     def cellTypeFromStyle(self, style):
+        """ Return a python type object from style """
         return self.BUILTIN_NUM_FMTS.get(style['numFmt'], unicode)[self.BUILTIN_TYPE]
 
     def cellFormatFromType(self, style):
+        """ Return a format string for style """
         return self.BUILTIN_NUM_FMTS.get(style['numFmt'], unicode)[self.BUILTIN_FMT]
 
 
 class Workbook(dict):
+    """ Represent the workbook with an index of all work sheets """
     def __init__(self, archive):
         parser = xml.parsers.expat.ParserCreate()
         parser.StartElementHandler = self._start_element
@@ -187,6 +219,10 @@ class Workbook(dict):
         return meta[u'sheetId']
 
 class Sheet(object):
+    """
+    Parse a sheet row by row and produce a row_event() for each finished row.
+    This is the part where the cell content is parsed too.
+    """
     STYLE_IDX = 's'
     STYLE = 'S'
     FMT = 'f'
@@ -295,6 +331,10 @@ class Sheet(object):
                 self.data += data
 
 class Document(object):
+    """
+    Represent a whole XLSX document and provide a high level interface to
+    its parts.
+    """
     def __init__(self, filename=None):
         self.__archive = None
         self.__shared_strings = None
@@ -306,6 +346,7 @@ class Document(object):
             self.open(filename)
 
     def open(self, filename):
+        """ Provide filename of XLSX document to open """
         self.__archive = DocumentArchive(filename)
 
     def archive(self):
@@ -329,9 +370,11 @@ class Document(object):
         return self.__workbook
 
     def sheet_names(self):
+        """ Return the name of the sheets in workbook """
         return self.workbook().names()
 
     def sheet(self, name):
+        """ Return a sheet object from the sheet with the name """
         if not self.__sheets.has_key(name):
             sheet_id = self.workbook().sheet_id(name)
             if not sheet_id:
@@ -340,9 +383,17 @@ class Document(object):
         return self.__sheets[name]
 
     def add_row_event_handler(self, handler):
+        """
+        Register a row event handler.
+        Such a handler is a function or function object that takes exactly on
+        row element as argument: f(row)
+        """
         self.__row_event_handlers.append(handler)
 
     def remove_row_event_handler(self, handler):
+        """
+        Remove row event handler from registered list of handlers.
+        """
         self.__row_event_handlers.remove(handler)
 
     def row_event(self, row):
