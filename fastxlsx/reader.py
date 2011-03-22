@@ -144,11 +144,13 @@ class Styles(object):
     def numberFormat(self, styleId):
         return self._numberFormats[int(styleId)]
 
-    def cellType(self, styleId):
-        style = self._numberFormats[int(styleId)]
+    def cellStyle(self, styleId):
+        return self._numberFormats[int(styleId)]
+
+    def cellTypeFromStyle(self, style):
         return self.BUILTIN_NUM_FMTS.get(style['numFmt'], unicode)[self.BUILTIN_TYPE]
 
-    def cellFormat(self, styleId):
+    def cellFormatFromType(self, style):
         return self.BUILTIN_NUM_FMTS.get(style['numFmt'], unicode)[self.BUILTIN_FMT]
 
 
@@ -186,6 +188,8 @@ class Workbook(dict):
 
 class Sheet(object):
     STYLE_IDX = 's'
+    STYLE = 'S'
+    FMT = 'f'
     TYPE = 't'
     TYPE_SHARED_STRING = u's'
     REF = 'r'
@@ -251,22 +255,31 @@ class Sheet(object):
                 c[self.VALUE] = self.data
             #fmt = self.styles.numberFormat(c[self.STYLE_IDX])
             #print "cell format is:", str(fmt['numFmt']), c[self.COLUMN], c[self.VALUE]
-            cellType = self.styles.cellType(c[self.STYLE_IDX])
-            if cellType is datetime and c[self.VALUE] is not None:
+            c[self.STYLE] = self.styles.cellStyle(c[self.STYLE_IDX])
+            c[self.FMT] = cellType = self.styles.cellTypeFromStyle(c[self.STYLE])
+            v = c[self.VALUE]
+            if (v is not None) and (c[self.FMT] in (datetime.datetime,
+                                                    datetime.date,
+                                                    datetime.time)):
                 try:
-                    v = float(c[self.VALUE])
+                    d = xldate.xldate_as_tuple(float(v), 0)
+                except xldate.XLDateAmbiguous, e:
+                    if v == 1.0:
+                        print "value 1.0 for date:", c
+                        c[self.VALUE] = ''
+                    else:
+                        raise e
+                c[self.VALUE] = cellType(*d)
+            else:
+                if v is None:
+                    c[self.VALUE] = ''
+                elif not cellType is unicode:
                     try:
-                        d = xldate.xldate_as_tuple(v, 0)
-                        c[self.VALUE] = datetime.datetime(*d)
-                    except xldate.XLDateAmbiguous, e:
-                        if v == 1.0:
-                            print "value 1.0 for date:", c
-                            c[self.VALUE] = ''
-                        else:
-                            raise e
-                except ValueError, e:
-                    print "no float:", c
-                    pass
+                        c[self.VALUE] = cellType(v)
+                    except TypeError, e:
+                        print repr(c)
+                        print str(e), "value:", repr(v)
+                        raise e
             self.current_row.append(c)
             self.data = None
             self.cell = None
