@@ -223,14 +223,15 @@ class Sheet(object):
     Parse a sheet row by row and produce a row_event() for each finished row.
     This is the part where the cell content is parsed too.
     """
-    STYLE_IDX = 's'
-    STYLE = 'S'
+    STYLE_IDX = 'i'
+    STYLE = 's'
     FMT = 'f'
-    TYPE = 't'
-    TYPE_SHARED_STRING = u's'
     REF = 'r'
     COLUMN = 'c'
     VALUE = 'v'
+    TYPE = 't'
+    TYPE_SHARED_STRING = u's'
+    GENERATED_CELL = 'g'
 
     rel_re = re.compile(r'([A-Z]+)(\d+)')
     MAX_COLUMNS = 1024
@@ -270,11 +271,22 @@ class Sheet(object):
 
         cell[self.REF] = (v, row)
         # savety check to detect omitted cells what we currently don't support
-        if v != cell[self.COLUMN]:
+        if cell[self.COLUMN] > v:
             raise Exception(
-                "Detected omitted cell. This feature is not yet implemented: %s <> %s" % (
-                    v, cell[self.COLUMN]
+                "Detected smaller index than current cell, something is wrong! (row %s): %s <> %s" % (
+                    row, v, cell[self.COLUMN]
                 ))
+        # add omitted cells
+        for i in xrange(cell[self.COLUMN], v):
+            self.current_row.append({
+                self.GENERATED_CELL: True,
+                self.STYLE_IDX: None,
+                self.TYPE: None,
+                self.REF: (i, row),
+                self.COLUMN: i,
+                self.VALUE: u'',
+                self.TYPE: unicode,
+            })
 
     def _start_element(self, name, attrs):
         #print "start element:", name, attrs
