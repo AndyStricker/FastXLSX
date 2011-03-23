@@ -285,7 +285,7 @@ class Sheet(object):
                 self.REF: (i, row),
                 self.COLUMN: i,
                 self.VALUE: u'',
-                self.TYPE: unicode,
+                self.FMT: unicode,
             })
 
     def _start_element(self, name, attrs):
