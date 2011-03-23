@@ -54,9 +54,9 @@ class Converter(object):
             elif isinstance(v, (float, int)):
                 record.append(str(v))
             elif isinstance(v, datetime.datetime):
-                record.append(v.strftime('%d.%m.%Y %H:%M:%S'))
+                record.append(v.strftime('%Y-%m-%dT%H:%M:%S'))
             elif isinstance(v, datetime.date):
-                record.append(v.strftime('%d.%m.%Y'))
+                record.append(v.strftime('%Y-%m-%d'))
             elif isinstance(v, datetime.time):
                 record.append(v.strftime('%H:%M:%S'))
             else:
