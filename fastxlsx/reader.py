@@ -330,13 +330,20 @@ class Sheet(object):
                                                     datetime.time)):
                 try:
                     d = xldate.xldate_as_tuple(float(v), 0)
-                except xldate.XLDateAmbiguous, e:
+                    c[self.VALUE] = cellType(*d)
+                except (xldate.XLDateAmbiguous, ValueError), e:
                     if v == 1.0:
                         print "value 1.0 for date:", c
                         c[self.VALUE] = ''
                     else:
-                        raise e
-                c[self.VALUE] = cellType(*d)
+                        print "Invalid date, assume text or number content:", c[self.VALUE]
+                        if re.match(r'^\d+$', v):
+                            c[self.TYPE] = cellType = int
+                        elif re.match(r'^\d+\.\d+$', v):
+                            c[self.TYPE] = cellType = float
+                        else:
+                            c[self.TYPE] = cellType = unicode
+                        c[self.VALUE] = cellType(v)
             else:
                 if v is None:
                     c[self.VALUE] = ''
