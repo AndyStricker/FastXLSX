@@ -171,7 +171,10 @@ class Styles(object):
 
     def cell_style(self, styleId):
         """ Return the style with the ID styleId """
-        return self._numberFormats[int(styleId)]
+        if styleId is None:
+            return self._numberFormats[0]   # default format is text '@'
+        else:
+            return self._numberFormats[int(styleId)]
 
     def cell_type_from_style(self, style):
         """ Return a python type object from style """
