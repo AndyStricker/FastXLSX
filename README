@@ -7,8 +7,8 @@ read very large files.
 
 Before I started this project I tried the following projects. All of them have
 inspired me. I'll like to give credit to the authors of those projects. While I
-also consulted the ECMA-376 specifications [1]. The source code of those
-projects where easier to understand.
+also consulted the ECMA-376 specifications [1], the source code of those
+projects were easier to understand.
 
 Project:    openpyxl
 Author:     Eric Gazoni
