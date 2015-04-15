@@ -1,5 +1,5 @@
 Reader for XLSX files with a minimum memory footprint
------------------------------------------------------
+=====================================================
 
 Don't use this if you just want to read a XLSX file. There are a few other
 projects that will do that better for now. This piece of code is optimized to
@@ -27,8 +27,20 @@ Project:    Spreadsheet::XLSX
 Author:     Dmitry Ovsyanko
 CPAN:       http://search.cpan.org/~dmow/Spreadsheet-XLSX-0.13-withoutworldwriteables/lib/Spreadsheet/XLSX.pm
 
+Usage
+-----
+
+Maybe you need to set PYTHONPATH environment variable to find the fastxslx
+package first.
+
+python xlsx-to-csv.py YOUR_EXCEL_FILE.xslx YOUR_WORKSHEET_NAME
+
+The converter then will create a file named as follows:
+
+  YOUR_EXCEL_FILE.xslx-YOUR_WORKSHEET_NAME.csv
 
 History
+-------
 
 This project started as I got a database dump as a XLSX file instead something
 more portable. As this is usually not really a problem - just open it with

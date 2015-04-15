@@ -25,15 +25,27 @@ import csv
 import datetime
 import fastxlsx
 
+def usage(msg):
+    if msg:
+        print msg
+    print "Usage: xslx-to-csv.py <FILENAME>.xslx <SHEETNAME>\n"
+    sys.exit(1)
+
+if len(sys.argv) < 3:
+    usage('Wrong number of arguments')
+
 filename = sys.argv[1]
 if not filename:
-    print "No filename specified"
-    sys.exit(1)
+    usage("No filename specified")
 sheetname = sys.argv[2]
 if not sheetname:
-    print "No sheetname specified"
+    usage("No sheetname specified")
+
+print "Fast XLSX reader"
 
 outfile = file("%s-%s.csv" % (filename, sheetname), 'w')
+
+print ''
 
 doc = fastxlsx.reader.Document()
 print "Loading workbook in progress..."
