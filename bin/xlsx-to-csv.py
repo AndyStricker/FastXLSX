@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # Copyright (c) 2011 Andreas Stricker <andy@knitter.ch>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
