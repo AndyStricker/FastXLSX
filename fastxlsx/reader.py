@@ -183,11 +183,17 @@ class Styles(object):
 
     def cell_type_from_style(self, style):
         """ Return a python type object from style """
-        return self.BUILTIN_NUM_FMTS.get(style['numFmt'], unicode)[self.BUILTIN_TYPE]
+        numFmt = style['numFmt']
+        if numFmt >= 0xA0:
+            raise RuntimeError("Custom formats not supported yet")
+        return self.BUILTIN_NUM_FMTS.get(numFmt, unicode)[self.BUILTIN_TYPE]
 
     def cell_format_from_style(self, style):
         """ Return a format string for style """
-        return self.BUILTIN_NUM_FMTS.get(style['numFmt'], unicode)[self.BUILTIN_FMT]
+        numFmt = style['numFmt']
+        if numFmt >= 0xA0:
+            raise RuntimeError("Custom formats not supported yet")
+        return self.BUILTIN_NUM_FMTS.get(numFmt, unicode)[self.BUILTIN_FMT]
 
 
 class Workbook(dict):

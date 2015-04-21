@@ -39,6 +39,11 @@ The converter then will create a file named as follows:
 
   YOUR_EXCEL_FILE.xslx-YOUR_WORKSHEET_NAME.csv
 
+Todo
+----
+
+- Support custom formats in cells
+
 History
 -------
 
