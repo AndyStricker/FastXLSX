@@ -88,6 +88,11 @@ class SharedStrings(list):
 
 class Styles(object):
     """ Parse style file and provide methods to work with styles and formats. """
+    def _dateWrapper(*args):
+        if len(args) == 6:
+            return datetime.datetime(*args)
+        else:
+            return datetime.date(*args)
     BUILTIN_FMT = 0
     BUILTIN_TYPE = 1
     # Stolen from perls Spreadsheet::XLSX
@@ -106,10 +111,10 @@ class Styles(object):
         0x0B: ('0.00E+00', float),
         0x0C: ('# ?/?', float),
         0x0D: ('# ??/??', float),
-        0x0E: ('m-d-yy', datetime.date),
-        0x0F: ('d-mmm-yy', datetime.date),
-        0x10: ('d-mmm', datetime.date),
-        0x11: ('mmm-yy', datetime.date),
+        0x0E: ('m-d-yy', _dateWrapper),
+        0x0F: ('d-mmm-yy', _dateWrapper),
+        0x10: ('d-mmm', _dateWrapper),
+        0x11: ('mmm-yy', _dateWrapper),
         0x12: ('h:mm AM/PM', datetime.time),
         0x13: ('h:mm:ss AM/PM', datetime.time),
         0x14: ('h:mm', datetime.time),
